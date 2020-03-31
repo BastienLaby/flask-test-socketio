@@ -1,0 +1,10 @@
+*.pyc
+
+# venv
+
+Include/**
+Lib/**
+Scripts/**
+pyvenv.cfg
+.vscode/
+{{cookiecutter.project_name}}.code-workspace

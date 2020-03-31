@@ -1,0 +1,141 @@
+<!DOCTYPE HTML>
+
+<html>
+<head>
+
+    <script src="//code.jquery.com/jquery-1.12.4.min.js" crossorigin="anonymous"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" crossorigin="anonymous"></script>
+    <script type="text/javascript" charset="utf-8">
+
+        $(document).ready(function() {
+
+            // Use a "/test" namespace.
+            // An application can open a connection on multiple namespaces, and
+            // Socket.IO will multiplex all those connections on a single
+            // physical channel. If you don't care about multiple channels, you
+            // can set the namespace to an empty string.
+            namespace = '/test';
+
+            // Connect to the Socket.IO server.
+            // The connection URL has the following format, relative to the current page:
+            //     http[s]://<domain>:<port>[/<namespace>]
+            var socket = io(namespace);
+
+            // Event handler for server sent data.
+            // The callback function is invoked whenever the server emits data
+            // to the client. The data is then displayed in the "Logs"
+            // section of the page.
+
+            socket.on('server_message', function(msg, cb) {
+
+                if(msg.type == 'connection_feedback') {
+                    $('#username').text(msg.username)
+                }
+
+                if(msg.type == 'rooms_updated') {
+                    var rooms_links = '';
+                    var rooms_options = '';
+                    for (i = 0; i < msg.rooms.length; i++) {
+                        rooms_links = rooms_links.concat(`${msg.rooms[i]} (<a id="${msg.rooms[i]}", class="leave_room" href="#">leave</a>), `);
+                        rooms_options = rooms_options.concat(`<option value="${msg.rooms[i]}">${msg.rooms[i]}</option>`)
+                    }
+                    if (rooms_links == '') {
+                        rooms_links = 'None';
+                    }
+                    $('#rooms_list').html(rooms_links);
+                    $('#form_room_list').html(rooms_options);
+                }
+
+                if (msg.hasOwnProperty('message')) {
+                    $('#logs').append(`${msg.prefix} > ${msg.message}<br>`);
+                }
+
+            });
+
+            // Handlers for the different forms in the page.
+            // These accept data from the user and send it to the server in a
+            // variety of ways
+
+            $('form#simple_message').submit(function(event) {
+                socket.emit('simple_message', {
+                    message: $('#simple_message_data').val()
+                });
+                return false;
+            });
+
+            $('form#broadcast_message').submit(function(event) {
+                socket.emit('broadcast_message', {
+                    message: $('#broadcast_message_data').val()
+                });
+                return false;
+            });
+
+            $('form#room_message').submit(function(event) {
+                var room = $('#form_room_list').val();
+                if (room != null) {
+                    socket.emit('room_message', {
+                        message: $('#room_message_data').val(),
+                        room: $('#form_room_list').val()
+                    });
+                }
+                return false;
+            });
+
+            $('form#join_room').submit(function(event) {
+                socket.emit('user_join_room', {
+                    room: $('#join_room_name').val(),
+                    username: $('#username').text()
+                });
+                return false;
+            });
+
+            $('#rooms_list').on('click', '.leave_room', function(event){
+                socket.emit('user_leave_room', {
+                    room: $(event.target).attr('id'),
+                    username: $('#username').text()
+                });
+            });
+
+        });
+
+    </script>
+
+</head>
+<body>
+
+        <h1>SocketsIO toolbox</h1>
+
+        <p>Your Name : <b id="username"></b></p>
+
+        <h2>Messages</h2>
+
+        <form id="simple_message" method="POST" action='#'>
+            <input type="text" name="simple_message_data" id="simple_message_data" placeholder="Message">
+            <input type="submit" value="Simple Message">
+        </form>
+
+        <form id="broadcast_message" method="POST" action='#'>
+            <input type="text" name="broadcast_message_data" id="broadcast_message_data" placeholder="Message">
+            <input type="submit" value="Broadcast Message">
+        </form>
+
+        <form id="room_message" method="POST" action='#'>
+            <input type="text" name="room_message_data" id="room_message_data" placeholder="Message">
+            <select id="form_room_list"></select>
+            <input type="submit" value="Message to room">
+        </form>
+
+        <h2>Rooms</h2>
+
+        <form id="join_room" method="POST" action='#'>
+            <input type="text" name="join_room_name" id="join_room_name" placeholder="Room Name">
+            <input type="submit" value="Join">
+        </form>
+
+        <p id="rooms_list">None</p>
+
+        <h3>Logs</h3>
+        <p id="logs"></p>
+
+</body>
+</html>
